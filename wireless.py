@@ -28,7 +28,7 @@ class WirelessLog(object):
 
 
 class WirelessConnection(object):
-    def __init__(self, wait_time=5):
+    def __init__(self, wait_time=1):
         def __monitor_connection():
             while True:
                 con = not os.system('ping -q -w9 -c1 8.8.8.8 >/dev/null 2>/dev/null')
@@ -40,7 +40,7 @@ class WirelessConnection(object):
         self.con = [(time.time(), con)]
         self._auto_connect = False
         self._ac_lock = threading.Lock()
-        th = threading.Thread(target=self.is_connected)
+        th = threading.Thread(target=__monitor_connection)
         th.daemon = True
         th.start()
 
@@ -53,12 +53,12 @@ class WirelessConnection(object):
 
     def connect(self):
         if not self.is_connected():
-            os.system('sudo ifconfig wlan0 down && '
-                      'sudo ifconfig wlan0 up && '
-                      'sudo dhclient wlan0')
+            os.system('sudo ifconfig wlan0 down  >/dev/null 2>/dev/null && '
+                      'sudo ifconfig wlan0 up >/dev/null 2>/dev/null && '
+                      'sudo dhclient wlan0 >/dev/null 2>/dev/null ')
 
     def auto_connect(self, retry_time=30, on=True):
-        def ac():
+        def __ac():
             r = retry_time
             while self._auto_connect:
                 if not self.is_connected():
@@ -67,12 +67,12 @@ class WirelessConnection(object):
                     if self.is_connected():
                         r = max(2 * (time.time() - self.change_time()), retry_time)
                     else:
-                        r *= 2
+                        r = min(2 * r, 60 * 4)
         self._ac_lock.acquire()
         if self._auto_connect != on:
             self._auto_connect = on
             if on:
-                th = threading.Thread(target=ac)
+                th = threading.Thread(target=__ac)
                 th.daemon = True
                 th.start()
         self._ac_lock.release()
@@ -94,25 +94,25 @@ def main():
     log = WirelessLog()
     con = WirelessConnection()
     con.auto_connect()
-    update_every = 5
+    update_every = 1
     start_time = time.time()
     try:
         while True:
             t = (-int(time.time() - start_time) % update_every) or update_every
             if con.wait_for_change(t):
-                log.write(('Disconnected' if con.is_connected() else "Connected")
+                log.write(('Disconnected' if con.is_connected() else "Connected") +
                           (' for ' + str(int(con.con[-1][0] - con.con[-2][0])) + ' seconds\n'))
             log.display()
             sys.stdout.write("\033[K")
             dur = int(time.time() - con.change_time())
-            if con.is_connected:
+            if con.is_connected():
                 print 'Connected for', dur, 'seconds'
             else:
                 print 'Disconnected for', dur, 'seconds... Attempting to reconnect'
             sys.stdout.write("\033[F\r")
     finally:
         print
-        log.write(('Connected' if con else "Disconnected") +
+        log.write(('Connected' if con.is_connected() else "Disconnected") +
                   (' for ' + str(int(time.time() - con.change_time())) + ' seconds\n') +
                   ('-' * 80 + '\n')
                   )
