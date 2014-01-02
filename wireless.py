@@ -6,7 +6,7 @@ import threading
 
 
 class WirelessLog(object):
-    def __init__(self, filename='wireless.log'):
+    def __init__(self, filename='connection.log'):
         self.log_file = filename
         self.last_read = 0
         self.last_write = 0
