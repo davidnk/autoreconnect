@@ -53,9 +53,9 @@ class WirelessConnection(object):
 
     def connect(self):
         if not self.is_connected():
-            os.system('sudo ifconfig wlan0 down  >/dev/null 2>/dev/null && '
-                      'sudo ifconfig wlan0 up >/dev/null 2>/dev/null && '
-                      'sudo dhclient wlan0 >/dev/null 2>/dev/null ')
+            os.system('ifconfig wlan0 down  >/dev/null 2>/dev/null && '
+                      'ifconfig wlan0 up >/dev/null 2>/dev/null && '
+                      'dhclient wlan0 >/dev/null 2>/dev/null ')
 
     def auto_connect(self, retry_time=30, on=True):
         def __ac():
@@ -91,7 +91,10 @@ class WirelessConnection(object):
 
 
 def main():
+    if os.geteuid() != 0:
+        exit("Script requires root.")
     log = WirelessLog()
+    log.write('-' * 80 + '\n')
     con = WirelessConnection()
     con.auto_connect()
     update_every = 1
@@ -111,11 +114,9 @@ def main():
                 print 'Disconnected for', dur, 'seconds... Attempting to reconnect'
             sys.stdout.write("\033[F\r")
     finally:
-        print
         log.write(('Connected' if con.is_connected() else "Disconnected") +
-                  (' for ' + str(int(time.time() - con.change_time())) + ' seconds\n') +
-                  ('-' * 80 + '\n')
-                  )
+                  (' for ' + str(int(time.time() - con.change_time())) + ' seconds\n'))
+        print
 
 if __name__ == "__main__":
     main()
