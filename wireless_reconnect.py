@@ -53,6 +53,8 @@ class WirelessConnection(object):
 
     def connect(self):
         if not self.is_connected():
+            # nmcli dev wifi connect <SSID> iface <iface> > /dev/null 2> /dev/null
+            # modprobe -r <driver> && modprobe <driver>
             os.system('ifconfig wlan0 down  >/dev/null 2>/dev/null && '
                       'ifconfig wlan0 up >/dev/null 2>/dev/null && '
                       'dhclient wlan0 >/dev/null 2>/dev/null ')
@@ -99,12 +101,17 @@ def main():
     con.auto_connect()
     update_every = 1
     start_time = time.time()
+    source_path = os.path.dirname(os.path.abspath(__file__))
     try:
         while True:
             t = (-int(time.time() - start_time) % update_every) or update_every
             if con.wait_for_change(t):
                 log.write(('Disconnected' if con.is_connected() else "Connected") +
                           (' for ' + str(int(con.con[-1][0] - con.con[-2][0])) + ' seconds\n'))
+                if con.is_connected():
+                    os.system('paplay ' + source_path + '/connect.ogg')
+                else:
+                    os.system('paplay ' + source_path + '/disconnect.ogg')
             log.display()
             sys.stdout.write("\033[K")
             dur = int(time.time() - con.change_time())
