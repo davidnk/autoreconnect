@@ -47,9 +47,9 @@ class WirelessConnection(object):
     def wait_for_change(self, timeout=float('inf')):
         "Returns True when connection state changes or False at timeout."
         t = time.time()
-        while (self.con[-1][0] < t and time.time() < t + timeout):
+        while (self.change_time() <= t and time.time() < t + timeout):
             time.sleep(1)
-        return self.con[-1][0] >= t
+        return self.change_time() > t
 
     def connect(self):
         if not self.is_connected():
