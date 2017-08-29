@@ -29,14 +29,17 @@ class WirelessLog(object):
 
 class WirelessConnection(object):
     def __init__(self, wait_time=1):
+        def __check_connection():
+            #return not os.system('ping -q -w9 -c1 8.8.8.8 >/dev/null 2>/dev/null')
+            return not os.system('ping -q -w9 -c1 google.com >/dev/null 2>/dev/null')
         def __monitor_connection():
             while True:
-                con = not os.system('ping -q -w9 -c1 8.8.8.8 >/dev/null 2>/dev/null')
+                con = __check_connection()
                 t = time.time()
                 if con != self.con[-1][1]:
                     self.con.append((t, con))
                 time.sleep(wait_time)
-        con = not os.system('ping -q -w9 -c1 8.8.8.8 >/dev/null 2>/dev/null')
+        con = __check_connection()
         self.con = [(time.time(), con)]
         self._auto_connect = False
         self._ac_lock = threading.Lock()
@@ -58,8 +61,10 @@ class WirelessConnection(object):
             os.system('ifconfig wlan0 down  >/dev/null 2>/dev/null && '
                       'ifconfig wlan0 up >/dev/null 2>/dev/null && '
                       'dhclient wlan0 >/dev/null 2>/dev/null ')
+            os.system("systemctl stop wpa_supplicant")
+            time.sleep(.1)
 
-    def auto_connect(self, retry_time=30, on=True):
+    def auto_connect(self, retry_time=90, on=True):
         def __ac():
             r = retry_time
             while self._auto_connect:
@@ -96,7 +101,7 @@ def main():
     if os.geteuid() != 0:
         exit("Script requires root.")
     log = WirelessLog()
-    log.write('-' * 80 + '\n')
+    log.write('-' * 78 + '\n')
     con = WirelessConnection()
     con.auto_connect()
     update_every = 1
